@@ -3,5 +3,3 @@ build
 dist
 package-lock.json
 drizzle/meta
-.openai
-.sites-runtime
