@@ -1,0 +1,54 @@
+{
+  "name": "url-shortener",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A failure-aware URL shortener with a Node.js API and React workspace",
+  "author": "Rahul Phull",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "dev:api": "node --env-file-if-exists=.env --watch --experimental-strip-types server/main.ts",
+    "build": "tsc -p tsconfig.server.json && vite build",
+    "start": "node --env-file-if-exists=.env build/server/main.js",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit",
+    "test": "node --experimental-strip-types --test --test-concurrency=1 tests/*.test.ts",
+    "test:integration": "node --env-file-if-exists=.env --experimental-strip-types --test tests/integration/*.test.ts",
+    "test:edge": "npm run build:edge && node --experimental-strip-types --test tests/edge/*.test.ts",
+    "test:ui": "npm run build:edge && playwright test",
+    "migrate": "node --env-file-if-exists=.env --experimental-strip-types scripts/migrate.ts",
+    "build:edge": "vite build && node scripts/build-edge.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run typecheck && npm test && npm run build",
+    "load": "node scripts/load.mjs"
+  },
+  "dependencies": {
+    "@fastify/cookie": "11.1.2",
+    "@fastify/static": "10.1.5",
+    "drizzle-orm": "0.45.3",
+    "fastify": "5.12.5",
+    "pg": "8.23.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "redis": "6.3.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261007.1",
+    "@electric-sql/pglite": "0.5.8",
+    "@playwright/test": "1.56.1",
+    "@types/node": "24.19.1",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "drizzle-kit": "0.31.11",
+    "esbuild": "0.28.2",
+    "miniflare": "4.20260730.0",
+    "prettier": "3.9.9",
+    "typescript": "7.0.2",
+    "vite": "8.3.3"
+  }
+}

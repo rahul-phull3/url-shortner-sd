@@ -1,0 +1,8 @@
+{$PUBLIC_HOST} {
+  encode gzip zstd
+  @internal path /internal/* /health/*
+  respond @internal "Not found" 404
+  reverse_proxy api:3000 {
+    header_up X-Forwarded-For {remote_host}
+  }
+}

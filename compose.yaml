@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: shortlink
+      POSTGRES_USER: shortlink
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-shortlink_dev}
+    ports: ["127.0.0.1:5432:5432"]
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shortlink -d shortlink"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  redis:
+    image: redis:7.4-alpine
+    command:
+      [
+        "redis-server",
+        "--maxmemory",
+        "64mb",
+        "--maxmemory-policy",
+        "noeviction",
+      ]
+    ports: ["127.0.0.1:6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  migrate:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://shortlink:${POSTGRES_PASSWORD:-shortlink_dev}@postgres:5432/shortlink
+    command: ["node", "build/scripts/migrate.js"]
+    depends_on:
+      postgres: { condition: service_healthy }
+  api:
+    build: .
+    environment:
+      NODE_ENV: development
+      PUBLIC_BASE_URL: http://localhost:3000
+      DATABASE_URL: postgresql://shortlink:${POSTGRES_PASSWORD:-shortlink_dev}@postgres:5432/shortlink
+      REDIS_URL: redis://redis:6379
+      METRICS_TOKEN: ${METRICS_TOKEN:-development-monitoring-token-change-this}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    init: true
+    restart: unless-stopped
+volumes:
+  postgres_data:

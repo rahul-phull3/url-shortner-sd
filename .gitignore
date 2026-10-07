@@ -1,0 +1,16 @@
+node_modules/
+build/
+dist/
+.env
+.env.*
+!.env.example
+coverage/
+playwright-report/
+test-results/
+.wrangler/
+*.log
+*.tgz
+*.zip
+.DS_Store
+secrets/
+backups/

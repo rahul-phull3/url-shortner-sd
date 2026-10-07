@@ -1,0 +1,26 @@
+groups:
+  - name: shortlink
+    rules:
+      - alert: ShortlinkUnavailable
+        expr: up{job="shortlink"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: The API cannot be scraped. Check process health and monitoring credentials.
+      - alert: ShortlinkHighErrorRate
+        expr: sum(rate(shortlink_http_requests_total{status_class="5xx"}[5m])) / clamp_min(sum(rate(shortlink_http_requests_total[5m])), 1) > 0.01
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: More than one percent of requests fail. Inspect database and Redis readiness.
+      - alert: ShortlinkSlowRedirects
+        expr: histogram_quantile(0.95, sum by (le) (rate(shortlink_http_duration_seconds_bucket{route="/r/:code",status_class="3xx"}[5m]))) > 0.25
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: Successful redirects exceed the 250 ms p95 target.
+      - alert: ShortlinkAnalyticsLoss
+        expr: sum(increase(shortlink_events_total{event=~"analytics_drop|analytics_error"}[5m])) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: Redirect counts may be incomplete. Redirect availability is prioritized over analytics.
