@@ -1,0 +1,45 @@
+flowchart TD
+    accTitle: URL Shortener AWS delivery and identity
+    accDescr: Verification and proposed AWS release flow, including OIDC, images, migration gating, static assets, secrets, encryption, and private service endpoints.
+    Verify["GitHub Actions: existing Verify job"] -->|Proposed release job| Release["AWS release orchestration"]
+    Role["IAM deployment role"] -.->|GitHub OIDC credentials| Release
+    CDN["CloudFront: serve release HTML"]
+    Execution["ECS task execution role"]
+
+    subgraph AWS["AWS application Region"]
+        direction TB
+        Registry["Amazon ECR: image digest"]
+        Upload["Amazon S3: versioned assets"]
+        Secrets["AWS Secrets Manager"]
+        Keys["AWS KMS"]
+        subgraph Private["Private app subnets"]
+            direction TB
+            Migrate["Fargate: one-off migration task"]
+            Service["ECS service: rolling release"]
+            Endpoint["VPC endpoints: private AWS APIs"]
+        end
+        SQL["RDS PostgreSQL primary"]
+        Keys -.->|Secret encryption| Secrets
+        Secrets -.->|Injected environment| Migrate
+        Secrets -.->|Injected environment| Service
+        Registry -->|Pinned image| Migrate
+        Registry -->|Pinned image| Service
+        Migrate -->|Schema changes| SQL
+        Migrate -->|Exit 0: deployment gate| Service
+        Endpoint -.->|Private service access| Migrate
+        Endpoint -.->|Private service access| Service
+    end
+
+    Execution -.->|Scoped secret access| Secrets
+    Upload -->|Publish HTML after API is healthy| CDN
+    Release -->|Build and push| Registry
+    Release -->|Upload hashed assets first| Upload
+
+    classDef delivery fill:#edf5ff,stroke:#3973b9,color:#153552,stroke-width:1.5px;
+    classDef compute fill:#fff2df,stroke:#bd751a,color:#543710,stroke-width:1.5px;
+    classDef data fill:#f2edff,stroke:#8261b8,color:#382553,stroke-width:1.5px;
+    classDef security fill:#eaf7f2,stroke:#438b72,color:#204d3e,stroke-width:1.5px;
+    class Verify,Release,Registry,CDN,Endpoint delivery;
+    class Migrate,Service compute;
+    class SQL,Upload data;
+    class Role,Execution,Secrets,Keys security;

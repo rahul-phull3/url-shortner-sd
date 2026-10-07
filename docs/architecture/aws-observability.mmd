@@ -1,0 +1,47 @@
+flowchart TD
+    accTitle: URL Shortener AWS observability and audit
+    accDescr: Private authenticated application metrics, native service monitoring, alert delivery, optional dashboards, and administrative audit storage.
+    subgraph Workload["ECS application task: one collector per API replica"]
+        direction TB
+        API["Node.js API"]
+        Collector["ADOT collector sidecar"]
+        API -->|Prometheus metrics: authenticated| Collector
+    end
+
+    Endpoint["VPC endpoints: AMP and regional STS"] -.->|Private AWS service access| Collector
+    TaskRole["IAM task role: AMP remote write"] -.->|Scoped runtime credentials| Collector
+
+    subgraph Monitoring["AWS managed monitoring"]
+        direction TB
+        Logs["CloudWatch Logs"]
+        Resources["ALB, ECS, RDS, ElastiCache"]
+        Metrics["CloudWatch metrics and alarms"]
+        AMP["Amazon Managed Service for Prometheus"]
+        Alerting["AMP rules and alert manager"]
+        Grafana["Amazon Managed Grafana: optional"]
+        SNS["Amazon SNS: alert topic"]
+        Resources -->|Native service metrics| Metrics
+        AMP -->|Evaluate application rules| Alerting
+        AMP -.->|Dashboard metrics| Grafana
+        Alerting -->|Configured receiver| SNS
+        Metrics -->|Alarm action| SNS
+    end
+
+    subgraph Audit["Administration audit"]
+        direction TB
+        Trail["AWS CloudTrail"]
+        Archive["S3: private audit archive"]
+        Trail -->|Management events| Archive
+    end
+
+    API -->|Structured stdout via awslogs| Logs
+    Collector -->|SigV4 remote write via AMP endpoint| AMP
+
+    classDef compute fill:#fff2df,stroke:#bd751a,color:#543710,stroke-width:1.5px;
+    classDef monitoring fill:#edf5ff,stroke:#3973b9,color:#153552,stroke-width:1.5px;
+    classDef security fill:#eaf7f2,stroke:#438b72,color:#204d3e,stroke-width:1.5px;
+    class API,Collector compute;
+    class Logs,Resources,Metrics,AMP,Alerting,Grafana,SNS monitoring;
+    class Trail,Archive security;
+    class Endpoint monitoring;
+    class TaskRole security;

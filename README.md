@@ -64,6 +64,19 @@ flowchart TD
 
 The design is a modular monolith: one deployable service with explicit boundaries. Separating link creation, redirects, and analytics into networked microservices would add deployment, consistency, and failure-management work before this workload justifies it.
 
+### AWS cloud deployment design
+
+![AWS cloud deployment: CloudFront, private S3 React assets, an ALB, ECS Fargate across two AZs, RDS PostgreSQL primary and standby, ElastiCache primary and replica, and backups](docs/architecture/aws-runtime.svg)
+
+This is the proposed AWS topology for the full Node.js edition. The current live application uses the separate D1 adapter; the diagram does not claim an existing AWS deployment. The API runs as identical private Fargate tasks, while PostgreSQL owns lifecycle correctness and ElastiCache handles immutable destination caching and atomic quotas. CloudFront caches hashed React assets from private S3; API responses and redirects are explicitly uncached.
+
+The [complete AWS deployment guide](docs/aws-deployment.md) covers service placement, subnet/security-group boundaries, IAM roles, secrets, TLS, CloudFront behavior, migration gates, release/rollback order, failover, recovery, and cost tradeoffs. It also includes these supporting diagrams:
+
+- [Delivery, migrations, secrets, and private endpoints](docs/architecture/aws-delivery.svg)
+- [CloudWatch, ADOT/Prometheus, alerting, dashboards, and audit](docs/architecture/aws-observability.svg)
+
+All three diagrams have editable [Mermaid sources and SVG exports](docs/architecture), with a reproducible rendering command in the guide. AWS infrastructure and its release/collector configuration are proposed deployment work; the application image and existing verification workflow are already implemented.
+
 ### Redirect sequence
 
 ```mermaid
@@ -218,6 +231,8 @@ npm run load -- http://localhost:3000/r/my-guide 1000 10
 The load script does not follow redirects to the destination. It reports status counts and p50/p95/p99 response time; it does not certify a throughput limit. Compare cold/warm cache, database failure, and Redis failure with the same data and hardware before drawing capacity conclusions.
 
 ## Deployment
+
+For the AWS managed-service deployment plan, see the [AWS guide and system design diagrams](docs/aws-deployment.md). It maps the full edition to Fargate, RDS, ElastiCache, CloudFront/S3, and the corresponding delivery and monitoring services.
 
 ### Full Node.js, PostgreSQL, and Redis edition
 

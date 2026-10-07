@@ -1,0 +1,56 @@
+flowchart TD
+    accTitle: URL Shortener AWS runtime deployment
+    accDescr: Edge routing and private application and data subnets across two Availability Zones, with database and cache replication and managed backups.
+    Visitor["Browser / link visitor"] -->|HTTPS| CDN["Amazon CloudFront"]
+    DNS["Amazon Route 53"] -.->|DNS alias| CDN
+    WAF["AWS WAF"] -.->|Web ACL| CDN
+    EdgeCert["ACM certificate: us-east-1"] -.->|Viewer TLS| CDN
+
+    subgraph Region["AWS application Region"]
+        direction TB
+        Assets["Amazon S3: private React build"]
+        OriginCert["ACM regional certificate"]
+        subgraph VPC["VPC: two Availability Zones"]
+            direction TB
+            subgraph Public["Public subnets A and B"]
+                ALB["Application Load Balancer"]
+            end
+            subgraph ZoneA["AZ A: private app and data subnets"]
+                direction TB
+                APIA["ECS Fargate: Node.js API A"]
+                Database["RDS PostgreSQL: primary"]
+                Cache["ElastiCache: primary"]
+            end
+            subgraph ZoneB["AZ B: private app and data subnets"]
+                direction TB
+                APIB["ECS Fargate: Node.js API B"]
+                Standby["RDS PostgreSQL: standby"]
+                Replica["ElastiCache: replica"]
+            end
+            ALB -->|HTTP 3000| APIA
+            ALB -->|HTTP 3000| APIB
+            APIA -->|PostgreSQL TLS| Database
+            APIB -->|PostgreSQL TLS| Database
+            APIA -->|Cache and quotas: TLS| Cache
+            APIB -->|Cache and quotas: TLS| Cache
+            Database ==>|Synchronous replication| Standby
+            Cache -.->|Asynchronous replication| Replica
+        end
+        Backup["RDS automated backups: PITR"]
+    end
+
+    CDN -->|HTML and assets: OAC| Assets
+    CDN -->|API and redirects: no cache| ALB
+    OriginCert -.->|Origin HTTPS| ALB
+    Database -.->|Managed backups| Backup
+
+    classDef edge fill:#edf5ff,stroke:#3973b9,color:#153552,stroke-width:1.5px;
+    classDef compute fill:#fff2df,stroke:#bd751a,color:#543710,stroke-width:1.5px;
+    classDef data fill:#f2edff,stroke:#8261b8,color:#382553,stroke-width:1.5px;
+    classDef security fill:#eaf7f2,stroke:#438b72,color:#204d3e,stroke-width:1.5px;
+    classDef external fill:#f1f4f8,stroke:#8091a8,color:#263b54,stroke-width:1.5px;
+    class CDN,DNS,ALB edge;
+    class APIA,APIB compute;
+    class Assets,Database,Standby,Cache,Replica,Backup data;
+    class WAF,EdgeCert,OriginCert security;
+    class Visitor external;

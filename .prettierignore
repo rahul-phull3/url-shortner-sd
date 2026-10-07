@@ -3,3 +3,4 @@ build
 dist
 package-lock.json
 drizzle/meta
+docs/architecture/*.svg
